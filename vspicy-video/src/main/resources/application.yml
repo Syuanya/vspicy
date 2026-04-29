@@ -1,0 +1,215 @@
+server:
+  port: 18084
+
+spring:
+  application:
+    name: vspicy-video
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/vspicy?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=5000&socketTimeout=30000
+    username: ${VSPICY_DB_USERNAME:vspicy}
+    password: ${VSPICY_DB_PASSWORD:change_me}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 5000
+      validation-timeout: 3000
+      maximum-pool-size: 10
+      minimum-idle: 2
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    group: vspicy-video-producer
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 兼容旧版代码可能读取 minio.*
+minio:
+  endpoint: http://127.0.0.1:9000
+  access-key: ${VSPICY_MINIO_ACCESS_KEY:change_me}
+  secret-key: ${VSPICY_MINIO_SECRET_KEY:change_me}
+  bucket: vspicy
+  bucket-name: vspicy
+  public-endpoint: http://127.0.0.1:9000
+  public-base-url: http://127.0.0.1:9000/vspicy
+  region: us-east-1
+  secure: false
+
+video:
+  storage:
+    origin-dir: D:/workspace/vspicy/media/origin
+    hls-dir: D:/workspace/vspicy/media/hls
+    tmp-dir: D:/workspace/vspicy/tmp
+    temp-root: D:/workspace/vspicy/tmp
+    tmp-root: D:/workspace/vspicy/tmp
+    merged-dir: D:/workspace/vspicy/media/merged
+    merged-root: D:/workspace/vspicy/media/merged
+    merge-root: D:/workspace/vspicy/media/merged
+    origin-root: D:/workspace/vspicy/media/origin
+    hls-root: D:/workspace/vspicy/media/hls
+    public-base-url: http://127.0.0.1:9000/vspicy
+    hls-url-prefix: http://127.0.0.1:9000/vspicy/videos
+    bucket: vspicy
+    public-endpoint: http://127.0.0.1:9000
+    ffmpeg-path: ffmpeg
+    ffprobe-path: ffprobe
+    segment-seconds: 6
+    hls-segment-seconds: 6
+    hls-playlist-name: index.m3u8
+  transcode:
+    enabled: true
+    rocket-mq: true
+    rocketmq: true
+    topic: vspicy-video-transcode-topic
+    transcode-topic: vspicy-video-transcode-topic
+    retry-topic: vspicy-video-transcode-retry-topic
+    tag: TRANSCODE
+    consumer-group: vspicy-video-transcode-consumer
+    producer-group: vspicy-video-producer
+    ffmpeg-path: ffmpeg
+    ffprobe-path: ffprobe
+    segment-seconds: 6
+    hls-segment-seconds: 6
+    hls-playlist-name: index.m3u8
+    overwrite: true
+    delete-origin-after-transcode: false
+    max-retry-count: 3
+    input-format: mp4
+    output-format: hls
+    video-codec: libx264
+    audio-codec: aac
+    preset: veryfast
+    crf: "23"
+    resolution: 720p
+    timeout-seconds: 3600
+    compensation:
+      enabled: true
+      fixed-delay-ms: 60000
+      initial-delay-ms: 30000
+      scan-limit: 20
+      limit: 20
+      batch-size: 20
+      pending-limit: 20
+      processing-limit: 20
+      running-limit: 20
+      failed-limit: 20
+      dead-limit: 20
+      compensate-limit: 20
+      max-retry-count: 3
+      max-retries: 3
+      stuck-minutes: 10
+      processing-timeout-minutes: 30
+      pending-timeout-minutes: 30
+      running-timeout-minutes: 60
+      timeout-minutes: 30
+      retry-delay-seconds: 60
+      retry-interval-seconds: 60
+      lock-enabled: false
+      lock-key: video_transcode_compensation
+      lock-lease-seconds: 120
+      cron: "0 */1 * * * ?"
+
+vspicy:
+  member:
+    url: http://localhost:18092
+
+  # 兼容中间版本可能读取 vspicy.minio.*
+  minio:
+    endpoint: http://127.0.0.1:9000
+    access-key: ${VSPICY_MINIO_ACCESS_KEY:change_me}
+    secret-key: ${VSPICY_MINIO_SECRET_KEY:change_me}
+    bucket: vspicy
+    bucket-name: vspicy
+    public-endpoint: http://127.0.0.1:9000
+    public-base-url: http://127.0.0.1:9000/vspicy
+    region: us-east-1
+    secure: false
+
+  video:
+    storage:
+      origin-dir: D:/workspace/vspicy/media/origin
+      hls-dir: D:/workspace/vspicy/media/hls
+      tmp-dir: D:/workspace/vspicy/tmp
+      temp-root: D:/workspace/vspicy/tmp
+      tmp-root: D:/workspace/vspicy/tmp
+      merged-dir: D:/workspace/vspicy/media/merged
+      merged-root: D:/workspace/vspicy/media/merged
+      merge-root: D:/workspace/vspicy/media/merged
+      origin-root: D:/workspace/vspicy/media/origin
+      hls-root: D:/workspace/vspicy/media/hls
+      public-base-url: http://127.0.0.1:9000/vspicy
+      hls-url-prefix: http://127.0.0.1:9000/vspicy/videos
+      bucket: vspicy
+      public-endpoint: http://127.0.0.1:9000
+      ffmpeg-path: ffmpeg
+      ffprobe-path: ffprobe
+      segment-seconds: 6
+      hls-segment-seconds: 6
+      hls-playlist-name: index.m3u8
+    transcode:
+      enabled: true
+      rocket-mq: true
+      rocketmq: true
+      topic: vspicy-video-transcode-topic
+      transcode-topic: vspicy-video-transcode-topic
+      retry-topic: vspicy-video-transcode-retry-topic
+      tag: TRANSCODE
+      consumer-group: vspicy-video-transcode-consumer
+      producer-group: vspicy-video-producer
+      ffmpeg-path: ffmpeg
+      ffprobe-path: ffprobe
+      segment-seconds: 6
+      hls-segment-seconds: 6
+      hls-playlist-name: index.m3u8
+      overwrite: true
+      delete-origin-after-transcode: false
+      max-retry-count: 3
+      input-format: mp4
+      output-format: hls
+      video-codec: libx264
+      audio-codec: aac
+      preset: veryfast
+      crf: "23"
+      resolution: 720p
+      timeout-seconds: 3600
+      compensation:
+        enabled: true
+        fixed-delay-ms: 60000
+        initial-delay-ms: 30000
+        scan-limit: 20
+        limit: 20
+        batch-size: 20
+        pending-limit: 20
+        processing-limit: 20
+        running-limit: 20
+        failed-limit: 20
+        dead-limit: 20
+        compensate-limit: 20
+        max-retry-count: 3
+        max-retries: 3
+        stuck-minutes: 10
+        processing-timeout-minutes: 30
+        pending-timeout-minutes: 30
+        running-timeout-minutes: 60
+        timeout-minutes: 30
+        retry-delay-seconds: 60
+        retry-interval-seconds: 60
+        lock-enabled: false
+        lock-key: video_transcode_compensation
+        lock-lease-seconds: 120
+        cron: "0 */1 * * * ?"
+    minio:
+      endpoint: http://127.0.0.1:9000
+      access-key: ${VSPICY_MINIO_ACCESS_KEY:change_me}
+      secret-key: ${VSPICY_MINIO_SECRET_KEY:change_me}
+      bucket: vspicy
+      bucket-name: vspicy
+      public-endpoint: http://127.0.0.1:9000
+      public-base-url: http://127.0.0.1:9000/vspicy
+      region: us-east-1
+      secure: false

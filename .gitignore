@@ -1,0 +1,44 @@
+# Maven / Java build
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Gradle, if any
+.gradle/
+build/
+
+# logs
+logs/
+*.log
+
+# local env / secrets
+.env
+.env.*
+!.env.example
+application-local.yml
+application-local.yaml
+application-dev-local.yml
+application-dev-local.yaml
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# runtime files
+tmp/
+temp/
+uploads/
+merged/
+hls/
+ffmpeg-temp/
+minio-data/
+rocketmq-store/

@@ -1,0 +1,35 @@
+# Local-only example. Copy to application-local.yml and do not commit real secrets.
+# Start services with: SPRING_PROFILES_ACTIVE=local
+
+spring:
+  datasource:
+    url: jdbc:mysql://${VSPICY_DB_HOST:127.0.0.1}:${VSPICY_DB_PORT:3306}/${VSPICY_DB_NAME:vspicy}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: ${VSPICY_DB_USERNAME:vspicy}
+    password: ${VSPICY_DB_PASSWORD:change_me}
+
+  data:
+    redis:
+      host: ${VSPICY_REDIS_HOST:127.0.0.1}
+      port: ${VSPICY_REDIS_PORT:6379}
+      password: ${VSPICY_REDIS_PASSWORD:}
+
+rocketmq:
+  name-server: ${VSPICY_ROCKETMQ_NAME_SERVER:127.0.0.1:9876}
+
+vspicy:
+  dev:
+    config-diagnostics:
+      enabled: ${VSPICY_DEV_CONFIG_DIAGNOSTICS_ENABLED:true}
+
+  minio:
+    endpoint: ${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}
+    bucket: ${VSPICY_MINIO_BUCKET:vspicy}
+    access-key: ${VSPICY_MINIO_ACCESS_KEY:change_me}
+    secret-key: ${VSPICY_MINIO_SECRET_KEY:change_me}
+
+  video:
+    storage:
+      temp-root: ${VSPICY_VIDEO_TEMP_ROOT:D:/workspace/vspicy/runtime/video/temp}
+      merged-root: ${VSPICY_VIDEO_MERGED_ROOT:D:/workspace/vspicy/runtime/video/merged}
+      hls-root: ${VSPICY_VIDEO_HLS_ROOT:D:/workspace/vspicy/runtime/video/hls}
+      ffmpeg-path: ${VSPICY_FFMPEG_PATH:ffmpeg}

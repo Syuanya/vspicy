@@ -1,0 +1,35 @@
+server:
+  port: 18083
+
+spring:
+  application:
+    name: vspicy-file
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 220MB
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/vspicy?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: ${VSPICY_DB_USERNAME:vspicy}
+    password: ${VSPICY_DB_PASSWORD:change_me}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 5000
+      validation-timeout: 3000
+      maximum-pool-size: 10
+      minimum-idle: 2
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+vspicy:
+  minio:
+    endpoint: http://127.0.0.1:9000
+    access-key: ${VSPICY_MINIO_ACCESS_KEY:change_me}
+    secret-key: ${VSPICY_MINIO_SECRET_KEY:change_me}
+    bucket: vspicy

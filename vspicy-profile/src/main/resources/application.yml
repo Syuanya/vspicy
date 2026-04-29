@@ -1,0 +1,20 @@
+server:
+  port: 18088
+
+spring:
+  application:
+    name: vspicy-profile
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/vspicy?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=5000&socketTimeout=30000
+    username: ${VSPICY_DB_USERNAME:vspicy}
+    password: ${VSPICY_DB_PASSWORD:change_me}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 5000
+      validation-timeout: 3000
+      maximum-pool-size: 10
+      minimum-idle: 2
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848

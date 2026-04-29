@@ -1,0 +1,35 @@
+server:
+  port: 18087
+
+spring:
+  application:
+    name: vspicy-recommend
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/vspicy?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=5000&socketTimeout=30000
+    username: ${VSPICY_DB_USERNAME:vspicy}
+    password: ${VSPICY_DB_PASSWORD:change_me}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 5000
+      validation-timeout: 3000
+      maximum-pool-size: 10
+      minimum-idle: 2
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: ${VSPICY_REDIS_PASSWORD:change_me}
+      timeout: 3000ms
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+
+vspicy:
+  recommend:
+    cache:
+      enabled: true
+      feed-ttl-seconds: 60
+      hot-ttl-seconds: 120
+      similar-ttl-seconds: 300
+      stale-ttl-seconds: 1800

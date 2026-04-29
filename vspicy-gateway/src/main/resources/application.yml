@@ -1,0 +1,124 @@
+server:
+  port: 18080
+
+spring:
+  application:
+    name: vspicy-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+    gateway:
+      routes:
+        - id: vspicy-auth
+          uri: http://localhost:18081
+          predicates:
+            - Path=/api/auth/**
+        - id: vspicy-user
+          uri: http://localhost:18082
+          predicates:
+            - Path=/api/users/**
+        - id: vspicy-file
+          uri: http://localhost:18083
+          predicates:
+            - Path=/api/files/**
+        - id: vspicy-video
+          uri: http://localhost:18084
+          predicates:
+            - Path=/api/videos/**
+        - id: vspicy-content-article
+          uri: http://localhost:18085
+          predicates:
+            - Path=/api/articles/**
+        - id: vspicy-content-audit
+          uri: http://localhost:18085
+          predicates:
+            - Path=/api/audit/**
+        - id: vspicy-interaction
+          uri: http://localhost:18086
+          predicates:
+            - Path=/api/interactions/**
+        - id: vspicy-recommend
+          uri: http://localhost:18087
+          predicates:
+            - Path=/api/recommend/**
+        - id: vspicy-profile
+          uri: http://localhost:18088
+          predicates:
+            - Path=/api/profiles/**
+        - id: vspicy-dashboard
+          uri: http://localhost:18089
+          predicates:
+            - Path=/api/dashboard/**
+        - id: vspicy-admin
+          uri: http://localhost:18090
+          predicates:
+            - Path=/api/admin/**
+        - id: vspicy-notification
+          uri: http://localhost:18091
+          predicates:
+            - Path=/api/notifications/**
+        - id: vspicy-member
+          uri: http://localhost:18092
+          predicates:
+            - Path=/api/members/**
+
+vspicy:
+  jwt:
+    secret: ${VSPICY_JWT_SECRET:change_me}
+  gateway:
+    auth:
+      enabled: true
+      dev-bypass-enabled: true
+      default-user-id: 1
+      default-username: dev-admin
+      default-roles:
+        - SUPER_ADMIN
+      default-permissions:
+        - '*'
+      whitelist:
+        - /api/auth/**
+        - /api/**/health
+        - /api/videos/*/play
+        - /api/articles/**
+        - /api/interactions/**
+        - /api/recommend/**
+        - /api/dashboard/**
+        - /api/profiles/**
+      permission-rules:
+        - path: /api/users/**
+          methods: [PUT]
+          permission: user:manage
+        - path: /api/users/**
+          methods: [GET]
+          permission: user:view
+        - path: /api/videos/**
+          methods: [PUT, DELETE]
+          permission: content:manage
+        - path: /api/admin/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: permission:view
+        - path: /api/members/subscribe
+          methods: [POST]
+          permission: member:subscribe
+        - path: /api/members/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: member:view
+        - path: /api/notifications/system
+          methods: [POST]
+          permission: notification:publish
+        - path: /api/notifications/events/**
+          methods: [POST]
+          permission: notification:publish
+        - path: /api/notifications/event-logs/**
+          methods: [GET, POST]
+          permission: notification:event:view
+        - path: /api/notifications/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: notification:view
+        - path: /api/audit/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: content:audit:view
+        - path: /api/videos/transcode/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: video:transcode:view

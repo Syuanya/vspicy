@@ -1,0 +1,52 @@
+#!/usr/bin/env sh
+set -eu
+
+echo "[pre-commit] checking staged files..."
+
+FILES=$(git diff --cached --name-only --diff-filter=ACM || true)
+
+if [ -z "$FILES" ]; then
+  exit 0
+fi
+
+MAX_BYTES=5242880
+
+for file in $FILES; do
+  if [ -f "$file" ]; then
+    size=$(wc -c < "$file" | tr -d ' ')
+    if [ "$size" -gt "$MAX_BYTES" ]; then
+      echo "[pre-commit] blocked large file >5MB: $file ($size bytes)"
+      exit 1
+    fi
+  fi
+done
+
+PRIVATE_KEY_PATTERN='(BEGIN RSA PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY|BEGIN PRIVATE KEY)'
+SECRET_ASSIGNMENT_PATTERN='(password|secret|access[-_]?key|secret[-_]?key)\s*[:=]'
+PLACEHOLDER_PATTERN='(\$\{|change_me|placeholder|example|your[-_]|<[^>]+>|:\s*$|=\s*$)'
+
+for file in $FILES; do
+  if [ -f "$file" ]; then
+    case "$file" in
+      .githooks/pre-commit)
+        continue
+        ;;
+      *.png|*.jpg|*.jpeg|*.gif|*.ico|*.webp|*.mp4|*.mov|*.zip|*.7z|*.jar)
+        continue
+        ;;
+    esac
+
+    if grep -E -i "$PRIVATE_KEY_PATTERN" "$file" >/dev/null 2>&1; then
+      echo "[pre-commit] possible secret detected in: $file"
+      exit 1
+    fi
+
+    if grep -E -i "$SECRET_ASSIGNMENT_PATTERN" "$file" \
+      | grep -E -i -v "$PLACEHOLDER_PATTERN" >/dev/null 2>&1; then
+      echo "[pre-commit] possible secret detected in: $file"
+      exit 1
+    fi
+  fi
+done
+
+echo "[pre-commit] ok"

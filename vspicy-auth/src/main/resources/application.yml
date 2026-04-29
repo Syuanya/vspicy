@@ -1,0 +1,30 @@
+server:
+  port: 18081
+
+spring:
+  application:
+    name: vspicy-auth
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/vspicy?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=5000&socketTimeout=30000
+    username: ${VSPICY_DB_USERNAME:vspicy}
+    password: ${VSPICY_DB_PASSWORD:change_me}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 5000
+      validation-timeout: 3000
+      maximum-pool-size: 10
+      minimum-idle: 2
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+vspicy:
+  jwt:
+    secret: ${VSPICY_JWT_SECRET:change_me}
+    access-token-minutes: 720
+    refresh-token-days: 7
