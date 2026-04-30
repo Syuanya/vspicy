@@ -25,6 +25,6 @@ mybatis-plus:
 
 vspicy:
   jwt:
-    secret: ${VSPICY_JWT_SECRET:change_me}
+    secret: ${VSPICY_JWT_SECRET:vspicy-local-dev-jwt-secret-2026-04-30}
     access-token-minutes: 720
     refresh-token-days: 7

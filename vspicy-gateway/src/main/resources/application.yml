@@ -65,7 +65,7 @@ spring:
 
 vspicy:
   jwt:
-    secret: ${VSPICY_JWT_SECRET:change_me}
+    secret: ${VSPICY_JWT_SECRET:vspicy-local-dev-jwt-secret-2026-04-30}
   gateway:
     auth:
       enabled: true
