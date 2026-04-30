@@ -9,7 +9,7 @@ spring:
       max-file-size: 200MB
       max-request-size: 220MB
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/vspicy?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    url: ${VSPICY_DB_URL:jdbc:mysql://${VSPICY_DB_HOST:127.0.0.1}:${VSPICY_DB_PORT:3306}/${VSPICY_DB_NAME:vspicy}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=5000&socketTimeout=30000}
     username: ${VSPICY_DB_USERNAME:vspicy}
     password: ${VSPICY_DB_PASSWORD:change_me}
     driver-class-name: com.mysql.cj.jdbc.Driver
