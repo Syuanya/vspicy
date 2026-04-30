@@ -21,8 +21,8 @@ public class VideoConfig {
     @Bean
     public MinioClient minioClient(
             @Value("${vspicy.video.minio.endpoint:${vspicy.minio.endpoint:${minio.endpoint:http://127.0.0.1:9000}}}") String endpoint,
-            @Value("${vspicy.video.minio.access-key:${vspicy.minio.access-key:${minio.access-key:minioadmin}}}") String accessKey,
-            @Value("${vspicy.video.minio.secret-key:${vspicy.minio.secret-key:${minio.secret-key:minioadmin}}}") String secretKey
+            @Value("${vspicy.video.minio.access-key:${vspicy.minio.access-key:${minio.access-key:change_me}}}") String accessKey,
+            @Value("${vspicy.video.minio.secret-key:${vspicy.minio.secret-key:${minio.secret-key:change_me}}}") String secretKey
     ) {
         if (endpoint == null || endpoint.isBlank()) {
             throw new IllegalStateException("MinIO endpoint 不能为空，请配置 vspicy.video.minio.endpoint");

@@ -3,6 +3,7 @@ package com.vspicy.notification.controller;
 import com.vspicy.common.core.Result;
 import com.vspicy.notification.dto.BusinessNotificationEventCommand;
 import com.vspicy.notification.service.NotificationEventService;
+import com.vspicy.notification.web.CurrentUser;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,7 +21,7 @@ public class NotificationEventController {
             @RequestBody BusinessNotificationEventCommand command,
             HttpServletRequest request
     ) {
-        return Result.ok(eventService.transcode(command, currentUserId(request)));
+        return Result.ok(eventService.transcode(command, CurrentUser.requireUserId(request)));
     }
 
     @PostMapping("/audit")
@@ -28,7 +29,7 @@ public class NotificationEventController {
             @RequestBody BusinessNotificationEventCommand command,
             HttpServletRequest request
     ) {
-        return Result.ok(eventService.audit(command, currentUserId(request)));
+        return Result.ok(eventService.audit(command, CurrentUser.requireUserId(request)));
     }
 
     @PostMapping("/interaction")
@@ -36,7 +37,7 @@ public class NotificationEventController {
             @RequestBody BusinessNotificationEventCommand command,
             HttpServletRequest request
     ) {
-        return Result.ok(eventService.interaction(command, currentUserId(request)));
+        return Result.ok(eventService.interaction(command, CurrentUser.requireUserId(request)));
     }
 
     @PostMapping("/security")
@@ -44,7 +45,7 @@ public class NotificationEventController {
             @RequestBody BusinessNotificationEventCommand command,
             HttpServletRequest request
     ) {
-        return Result.ok(eventService.security(command, currentUserId(request)));
+        return Result.ok(eventService.security(command, CurrentUser.requireUserId(request)));
     }
 
     @PostMapping("/custom")
@@ -52,18 +53,6 @@ public class NotificationEventController {
             @RequestBody BusinessNotificationEventCommand command,
             HttpServletRequest request
     ) {
-        return Result.ok(eventService.custom(command, currentUserId(request)));
-    }
-
-    private Long currentUserId(HttpServletRequest request) {
-        String value = request.getHeader("X-User-Id");
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return Long.valueOf(value);
-        } catch (Exception ex) {
-            return null;
-        }
+        return Result.ok(eventService.custom(command, CurrentUser.requireUserId(request)));
     }
 }

@@ -4,10 +4,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "vspicy.minio")
 public class MinioProperties {
-    private String endpoint;
-    private String accessKey;
-    private String secretKey;
-    private String bucket;
+    private String endpoint = "http://127.0.0.1:9000";
+    private String accessKey = "change_me";
+    private String secretKey = "change_me";
+    private String bucket = "vspicy";
 
     public String getEndpoint() { return endpoint; }
     public String getAccessKey() { return accessKey; }

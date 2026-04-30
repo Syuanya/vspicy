@@ -22,7 +22,9 @@ public class NotificationPreferenceService {
     }
 
     public List<NotificationPreferenceItem> list(Long userId) {
-        Long safeUserId = normalizeUserId(userId);
+        if (userId == null) {
+            throw new BizException("未登录");
+        }
         Map<String, NotificationPreferenceItem> defaults = defaults();
 
         List<NotificationPreferenceItem> saved = jdbcTemplate.query("""
@@ -37,7 +39,7 @@ public class NotificationPreferenceService {
                     rs.getInt("enabled") == 1 || SECURITY.equals(type),
                     SECURITY.equals(type)
             );
-        }, safeUserId);
+        }, userId);
 
         for (NotificationPreferenceItem item : saved) {
             defaults.put(item.notificationType(), item);
@@ -49,8 +51,10 @@ public class NotificationPreferenceService {
     }
 
     @Transactional
-    public List<NotificationPreferenceItem> save(NotificationPreferenceSaveCommand command, Long headerUserId) {
-        Long userId = command != null && command.userId() != null ? command.userId() : normalizeUserId(headerUserId);
+    public List<NotificationPreferenceItem> save(NotificationPreferenceSaveCommand command, Long userId) {
+        if (userId == null) {
+            throw new BizException("未登录");
+        }
 
         if (command == null || command.preferences() == null) {
             throw new BizException("preferences 不能为空");
@@ -101,10 +105,6 @@ public class NotificationPreferenceService {
         }
 
         return values.get(0) == 1;
-    }
-
-    private Long normalizeUserId(Long userId) {
-        return userId == null ? 1L : userId;
     }
 
     private Map<String, NotificationPreferenceItem> defaults() {

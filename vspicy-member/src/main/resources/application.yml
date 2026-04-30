@@ -16,14 +16,15 @@ spring:
       minimum-idle: 2
   data:
     redis:
-      host: 127.0.0.1
-      port: 6379
-      password: ${VSPICY_REDIS_PASSWORD:change_me}
-      timeout: 3000ms
+      host: ${VSPICY_REDIS_HOST:127.0.0.1}
+      port: ${VSPICY_REDIS_PORT:6379}
+      password: ${VSPICY_REDIS_PASSWORD:redis123456}
+      database: ${VSPICY_REDIS_DATABASE:0}
+      timeout: ${VSPICY_REDIS_TIMEOUT:3000ms}
   cloud:
     nacos:
       discovery:
-        server-addr: localhost:8848
+        server-addr: ${VSPICY_NACOS_SERVER_ADDR:127.0.0.1:8848}
 
 vspicy:
   member:

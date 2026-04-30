@@ -1,6 +1,8 @@
 package com.vspicy.video.service;
 
 import com.vspicy.video.dto.AdminServiceHealthItemView;
+import io.minio.BucketExistsArgs;
+import io.minio.MinioClient;
 import com.vspicy.video.dto.AdminServiceHealthSummaryView;
 import com.vspicy.video.dto.VideoTranscodeDispatchView;
 import com.vspicy.video.mq.VideoTranscodeDispatcher;
@@ -11,8 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.lang.reflect.Method;
-import java.net.HttpURLConnection;
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -27,17 +27,20 @@ public class AdminServiceHealthService {
     private final ApplicationContext applicationContext;
     private final VideoTranscodeDispatcher transcodeDispatcher;
     private final Environment environment;
+    private final MinioClient minioClient;
 
     public AdminServiceHealthService(
             JdbcTemplate jdbcTemplate,
             ApplicationContext applicationContext,
             VideoTranscodeDispatcher transcodeDispatcher,
-            Environment environment
+            Environment environment,
+            MinioClient minioClient
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.applicationContext = applicationContext;
         this.transcodeDispatcher = transcodeDispatcher;
         this.environment = environment;
+        this.minioClient = minioClient;
     }
 
     public AdminServiceHealthSummaryView summary() {
@@ -253,15 +256,34 @@ public class AdminServiceHealthService {
     private AdminServiceHealthItemView checkMinio() {
         long start = System.currentTimeMillis();
         String endpoint = firstProperty(
+                "vspicy.video.minio.endpoint",
                 "vspicy.minio.endpoint",
                 "minio.endpoint",
                 "minio.url",
                 "storage.minio.endpoint"
         );
         String bucket = firstProperty(
+                "vspicy.video.minio.bucket",
+                "vspicy.video.minio.bucket-name",
                 "vspicy.minio.bucket",
+                "vspicy.minio.bucket-name",
                 "minio.bucket",
+                "minio.bucket-name",
                 "storage.minio.bucket"
+        );
+        String accessKey = firstProperty(
+                "vspicy.video.minio.access-key",
+                "vspicy.video.minio.access-id",
+                "vspicy.minio.access-key",
+                "vspicy.minio.access-id",
+                "minio.access-key",
+                "minio.access-id",
+                "storage.minio.access-key"
+        );
+        String publicBaseUrl = firstProperty(
+                "vspicy.video.minio.public-base-url",
+                "vspicy.minio.public-base-url",
+                "minio.public-base-url"
         );
 
         if (isBlank(endpoint)) {
@@ -271,40 +293,44 @@ public class AdminServiceHealthService {
                     "objectStorage",
                     UNKNOWN,
                     "MinIO endpoint 未配置",
-                    "配置 vspicy.minio.endpoint 或 minio.endpoint",
+                    "配置 vspicy.video.minio.endpoint 或 vspicy.minio.endpoint",
                     start,
-                    mapOf("bucket", bucket)
+                    mapOf("bucket", bucket, "accessKey", maskAccessKey(accessKey))
+            );
+        }
+
+        if (isBlank(bucket)) {
+            return item(
+                    "minio",
+                    "MinIO",
+                    "objectStorage",
+                    WARN,
+                    "MinIO bucket 未配置",
+                    "配置 VSPICY_MINIO_BUCKET 或 vspicy.video.minio.bucket",
+                    start,
+                    mapOf("endpoint", endpoint, "accessKey", maskAccessKey(accessKey))
             );
         }
 
         try {
-            HttpURLConnection connection = (HttpURLConnection) URI.create(endpoint).toURL().openConnection();
-            connection.setConnectTimeout(2500);
-            connection.setReadTimeout(2500);
-            connection.setRequestMethod("GET");
-            int code = connection.getResponseCode();
+            boolean exists = minioClient.bucketExists(BucketExistsArgs.builder()
+                    .bucket(bucket)
+                    .build());
 
-            if (code >= 200 && code < 500) {
-                String status = isBlank(bucket) ? WARN : UP;
-                String message = isBlank(bucket)
-                        ? "MinIO endpoint 可达，但 bucket 未配置"
-                        : "MinIO endpoint 可达，HTTP " + code;
-                String suggestion = isBlank(bucket)
-                        ? "配置 MinIO bucket"
-                        : "如上传仍失败，请检查 accessKey / secretKey / bucket 是否存在";
-
+            if (exists) {
                 return item(
                         "minio",
                         "MinIO",
                         "objectStorage",
-                        status,
-                        message,
-                        suggestion,
+                        UP,
+                        "MinIO 凭证可用，bucket 存在",
+                        "无需处理",
                         start,
                         mapOf(
                                 "endpoint", endpoint,
                                 "bucket", bucket,
-                                "httpStatus", String.valueOf(code)
+                                "accessKey", maskAccessKey(accessKey),
+                                "publicBaseUrl", publicBaseUrl
                         )
                 );
             }
@@ -314,10 +340,15 @@ public class AdminServiceHealthService {
                     "MinIO",
                     "objectStorage",
                     WARN,
-                    "MinIO endpoint 返回 HTTP " + code,
-                    "检查 MinIO 服务、端口映射和 endpoint 配置",
+                    "MinIO 凭证可用，但 bucket 不存在：" + bucket,
+                    "登录 MinIO 控制台创建 bucket，或修正 VSPICY_MINIO_BUCKET",
                     start,
-                    mapOf("endpoint", endpoint, "bucket", bucket, "httpStatus", String.valueOf(code))
+                    mapOf(
+                            "endpoint", endpoint,
+                            "bucket", bucket,
+                            "accessKey", maskAccessKey(accessKey),
+                            "publicBaseUrl", publicBaseUrl
+                    )
             );
         } catch (Exception ex) {
             return item(
@@ -325,10 +356,15 @@ public class AdminServiceHealthService {
                     "MinIO",
                     "objectStorage",
                     DOWN,
-                    "MinIO endpoint 不可达：" + ex.getMessage(),
-                    "检查 MinIO 容器是否启动、9000 端口是否映射、endpoint 是否正确",
+                    "MinIO 不可用：" + rootMessage(ex),
+                    "检查 9000 端口、accessKey/secretKey、bucket 和 vspicy.video.minio 配置；9001 仅用于控制台",
                     start,
-                    mapOf("endpoint", endpoint, "bucket", bucket)
+                    mapOf(
+                            "endpoint", endpoint,
+                            "bucket", bucket,
+                            "accessKey", maskAccessKey(accessKey),
+                            "publicBaseUrl", publicBaseUrl
+                    )
             );
         }
     }
@@ -649,6 +685,19 @@ public class AdminServiceHealthService {
             return "";
         }
         return url.replaceAll("password=[^&;]+", "password=****");
+    }
+
+    private String maskAccessKey(String value) {
+        if (isBlank(value)) {
+            return "";
+        }
+        if (value.length() <= 2) {
+            return "**";
+        }
+        if (value.length() <= 6) {
+            return value.charAt(0) + "***" + value.charAt(value.length() - 1);
+        }
+        return value.substring(0, 2) + "***" + value.substring(value.length() - 2);
     }
 
     private String rootMessage(Exception ex) {

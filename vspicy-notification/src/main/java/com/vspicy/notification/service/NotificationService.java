@@ -1,6 +1,9 @@
 package com.vspicy.notification.service;
 
 import com.vspicy.common.exception.BizException;
+import com.vspicy.notification.dto.NotificationAdminInboxItem;
+import com.vspicy.notification.dto.NotificationAdminInboxSummaryView;
+import com.vspicy.notification.dto.NotificationBatchCommand;
 import com.vspicy.notification.dto.NotificationCreateCommand;
 import com.vspicy.notification.dto.NotificationInboxItem;
 import com.vspicy.notification.dto.NotificationSseEvent;
@@ -14,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -148,6 +152,29 @@ public class NotificationService {
                 """, inboxId, userId);
     }
 
+
+    public int markBatchRead(Long userId, NotificationBatchCommand command) {
+        List<Long> ids = normalizeInboxIds(command);
+        if (userId == null || ids.isEmpty()) {
+            throw new BizException("参数不完整");
+        }
+
+        String placeholders = placeholders(ids.size());
+        List<Object> params = new ArrayList<>();
+        params.add(userId);
+        params.addAll(ids);
+
+        return jdbcTemplate.update("""
+                UPDATE notification_inbox
+                SET read_status = 1,
+                    read_at = NOW()
+                WHERE user_id = ?
+                  AND deleted = 0
+                  AND read_status = 0
+                  AND id IN (
+                """ + placeholders + ")", params.toArray());
+    }
+
     public void markAllRead(Long userId) {
         if (userId == null) {
             throw new BizException("userId 不能为空");
@@ -174,6 +201,222 @@ public class NotificationService {
                 WHERE id = ?
                   AND user_id = ?
                 """, inboxId, userId);
+    }
+
+
+    public int deleteBatch(Long userId, NotificationBatchCommand command) {
+        List<Long> ids = normalizeInboxIds(command);
+        if (userId == null || ids.isEmpty()) {
+            throw new BizException("参数不完整");
+        }
+
+        String placeholders = placeholders(ids.size());
+        List<Object> params = new ArrayList<>();
+        params.add(userId);
+        params.addAll(ids);
+
+        return jdbcTemplate.update("""
+                UPDATE notification_inbox
+                SET deleted = 1
+                WHERE user_id = ?
+                  AND deleted = 0
+                  AND id IN (
+                """ + placeholders + ")", params.toArray());
+    }
+
+    public int clearRead(Long userId) {
+        if (userId == null) {
+            throw new BizException("userId 不能为空");
+        }
+
+        return jdbcTemplate.update("""
+                UPDATE notification_inbox
+                SET deleted = 1
+                WHERE user_id = ?
+                  AND deleted = 0
+                  AND read_status = 1
+                """, userId);
+    }
+
+    public List<NotificationAdminInboxItem> adminInbox(
+            Long userId,
+            Integer readStatus,
+            Integer deleted,
+            String notificationType,
+            String keyword,
+            Integer limit
+    ) {
+        int safeLimit = limit == null || limit <= 0 || limit > 500 ? 100 : limit;
+        List<Object> params = new ArrayList<>();
+        StringBuilder where = new StringBuilder(" WHERE 1 = 1 ");
+
+        if (userId != null && userId > 0) {
+            where.append(" AND i.user_id = ? ");
+            params.add(userId);
+        }
+        if (readStatus != null) {
+            where.append(" AND i.read_status = ? ");
+            params.add(readStatus);
+        }
+        if (deleted != null) {
+            where.append(" AND i.deleted = ? ");
+            params.add(deleted);
+        }
+        if (notificationType != null && !notificationType.isBlank()) {
+            where.append(" AND m.notification_type = ? ");
+            params.add(notificationType.trim().toUpperCase());
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            where.append(" AND (m.title LIKE ? OR m.content LIKE ? OR u.username LIKE ? OR u.nickname LIKE ?) ");
+            String like = "%" + keyword.trim() + "%";
+            params.add(like);
+            params.add(like);
+            params.add(like);
+            params.add(like);
+        }
+
+        params.add(safeLimit);
+
+        String sql = """
+                SELECT
+                  i.id AS inbox_id,
+                  i.message_id,
+                  i.user_id,
+                  u.username,
+                  u.nickname,
+                  m.title,
+                  m.content,
+                  m.notification_type,
+                  m.biz_type,
+                  m.biz_id,
+                  m.priority,
+                  m.publish_scope,
+                  m.status AS message_status,
+                  i.read_status,
+                  i.read_at,
+                  i.deleted,
+                  i.created_at AS delivered_at,
+                  m.sender_id,
+                  m.created_at AS message_created_at
+                FROM notification_inbox i
+                JOIN notification_message m ON m.id = i.message_id
+                LEFT JOIN sys_user u ON u.id = i.user_id
+                """ + where + """
+                ORDER BY i.id DESC
+                LIMIT ?
+                """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new NotificationAdminInboxItem(
+                rs.getLong("inbox_id"),
+                rs.getLong("message_id"),
+                rs.getLong("user_id"),
+                rs.getString("username"),
+                rs.getString("nickname"),
+                rs.getString("title"),
+                rs.getString("content"),
+                rs.getString("notification_type"),
+                rs.getString("biz_type"),
+                getNullableLong(rs.getObject("biz_id")),
+                rs.getString("priority"),
+                rs.getString("publish_scope"),
+                rs.getString("message_status"),
+                rs.getInt("read_status"),
+                rs.getString("read_at"),
+                rs.getInt("deleted"),
+                rs.getString("delivered_at"),
+                getNullableLong(rs.getObject("sender_id")),
+                rs.getString("message_created_at")
+        ), params.toArray());
+    }
+
+    public NotificationAdminInboxItem adminInboxDetail(Long inboxId) {
+        if (inboxId == null || inboxId <= 0) {
+            throw new BizException("inboxId 不能为空");
+        }
+        List<NotificationAdminInboxItem> items = jdbcTemplate.query("""
+                SELECT
+                  i.id AS inbox_id,
+                  i.message_id,
+                  i.user_id,
+                  u.username,
+                  u.nickname,
+                  m.title,
+                  m.content,
+                  m.notification_type,
+                  m.biz_type,
+                  m.biz_id,
+                  m.priority,
+                  m.publish_scope,
+                  m.status AS message_status,
+                  i.read_status,
+                  i.read_at,
+                  i.deleted,
+                  i.created_at AS delivered_at,
+                  m.sender_id,
+                  m.created_at AS message_created_at
+                FROM notification_inbox i
+                JOIN notification_message m ON m.id = i.message_id
+                LEFT JOIN sys_user u ON u.id = i.user_id
+                WHERE i.id = ?
+                LIMIT 1
+                """, (rs, rowNum) -> new NotificationAdminInboxItem(
+                rs.getLong("inbox_id"),
+                rs.getLong("message_id"),
+                rs.getLong("user_id"),
+                rs.getString("username"),
+                rs.getString("nickname"),
+                rs.getString("title"),
+                rs.getString("content"),
+                rs.getString("notification_type"),
+                rs.getString("biz_type"),
+                getNullableLong(rs.getObject("biz_id")),
+                rs.getString("priority"),
+                rs.getString("publish_scope"),
+                rs.getString("message_status"),
+                rs.getInt("read_status"),
+                rs.getString("read_at"),
+                rs.getInt("deleted"),
+                rs.getString("delivered_at"),
+                getNullableLong(rs.getObject("sender_id")),
+                rs.getString("message_created_at")
+        ), inboxId);
+        if (items.isEmpty()) {
+            throw new BizException("通知投递记录不存在");
+        }
+        return items.get(0);
+    }
+
+    public NotificationAdminInboxSummaryView adminInboxSummary(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new BizException("userId 不能为空");
+        }
+        return jdbcTemplate.queryForObject("""
+                SELECT
+                  u.id AS user_id,
+                  u.username,
+                  u.nickname,
+                  COUNT(i.id) AS total_deliveries,
+                  COALESCE(SUM(CASE WHEN i.deleted = 0 AND i.read_status = 0 THEN 1 ELSE 0 END), 0) AS unread_deliveries,
+                  COALESCE(SUM(CASE WHEN i.deleted = 0 AND i.read_status = 1 THEN 1 ELSE 0 END), 0) AS read_deliveries,
+                  COALESCE(SUM(CASE WHEN i.deleted = 1 THEN 1 ELSE 0 END), 0) AS deleted_deliveries,
+                  COALESCE(SUM(CASE WHEN i.deleted = 0 AND m.priority IN ('HIGH', 'URGENT') THEN 1 ELSE 0 END), 0) AS high_priority_deliveries,
+                  MAX(i.created_at) AS latest_delivered_at
+                FROM sys_user u
+                LEFT JOIN notification_inbox i ON i.user_id = u.id
+                LEFT JOIN notification_message m ON m.id = i.message_id
+                WHERE u.id = ?
+                GROUP BY u.id, u.username, u.nickname
+                """, (rs, rowNum) -> new NotificationAdminInboxSummaryView(
+                rs.getLong("user_id"),
+                rs.getString("username"),
+                rs.getString("nickname"),
+                rs.getLong("total_deliveries"),
+                rs.getLong("unread_deliveries"),
+                rs.getLong("read_deliveries"),
+                rs.getLong("deleted_deliveries"),
+                rs.getLong("high_priority_deliveries"),
+                rs.getString("latest_delivered_at")
+        ), userId);
     }
 
     public List<NotificationInboxItem> announcements(Integer limit) {
@@ -308,6 +551,22 @@ public class NotificationService {
                 messageId,
                 userId
         );
+    }
+
+
+    private List<Long> normalizeInboxIds(NotificationBatchCommand command) {
+        if (command == null || command.inboxIds() == null) {
+            return List.of();
+        }
+        return command.inboxIds().stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .limit(200)
+                .toList();
+    }
+
+    private String placeholders(int size) {
+        return String.join(",", java.util.Collections.nCopies(size, "?"));
     }
 
     private String blankToDefault(String value, String defaultValue) {

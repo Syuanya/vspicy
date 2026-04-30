@@ -75,6 +75,16 @@ public class NotificationSseService {
         return emitters == null ? 0 : emitters.size();
     }
 
+    public int onlineUserCount() {
+        return userEmitters.size();
+    }
+
+    public int onlineConnectionCount() {
+        return userEmitters.values().stream()
+                .mapToInt(Set::size)
+                .sum();
+    }
+
     private void safeSend(Long userId, SseEmitter emitter, String eventName, NotificationSseEvent event) {
         try {
             emitter.send(SseEmitter.event()

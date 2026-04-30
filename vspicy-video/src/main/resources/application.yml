@@ -6,8 +6,8 @@ spring:
     name: vspicy-video
   datasource:
     url: ${VSPICY_DB_URL:jdbc:mysql://${VSPICY_DB_HOST:127.0.0.1}:${VSPICY_DB_PORT:3306}/${VSPICY_DB_NAME:vspicy}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=5000&socketTimeout=30000}
-    username: ${VSPICY_DB_USERNAME:vspicy}
-    password: ${VSPICY_DB_PASSWORD:change_me}
+    username: ${VSPICY_DB_USERNAME:root}
+    password: ${VSPICY_DB_PASSWORD:root123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       connection-timeout: 5000
@@ -17,10 +17,10 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: localhost:8848
+        server-addr: ${VSPICY_NACOS_SERVER_ADDR:127.0.0.1:8848}
 
 rocketmq:
-  name-server: 127.0.0.1:9876
+  name-server: ${VSPICY_ROCKETMQ_NAME_SERVER:127.0.0.1:9876}
   producer:
     group: vspicy-video-producer
 
@@ -30,13 +30,13 @@ mybatis-plus:
 
 # 兼容旧版代码可能读取 minio.*
 minio:
-  endpoint: http://127.0.0.1:9000
-  access-key: ${VSPICY_MINIO_ACCESS_KEY:change_me}
-  secret-key: ${VSPICY_MINIO_SECRET_KEY:change_me}
-  bucket: vspicy
-  bucket-name: vspicy
-  public-endpoint: http://127.0.0.1:9000
-  public-base-url: http://127.0.0.1:9000/vspicy
+  endpoint: ${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}
+  access-key: ${VSPICY_MINIO_ACCESS_KEY:vspicy}
+  secret-key: ${VSPICY_MINIO_SECRET_KEY:vspicy123456}
+  bucket: ${VSPICY_MINIO_BUCKET:vspicy}
+  bucket-name: ${VSPICY_MINIO_BUCKET:vspicy}
+  public-endpoint: ${VSPICY_MINIO_PUBLIC_ENDPOINT:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}}
+  public-base-url: ${VSPICY_MINIO_PUBLIC_BASE_URL:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}/${VSPICY_MINIO_BUCKET:vspicy}}
   region: us-east-1
   secure: false
 
@@ -52,10 +52,10 @@ video:
     merge-root: D:/workspace/vspicy/media/merged
     origin-root: D:/workspace/vspicy/media/origin
     hls-root: D:/workspace/vspicy/media/hls
-    public-base-url: http://127.0.0.1:9000/vspicy
-    hls-url-prefix: http://127.0.0.1:9000/vspicy/videos
-    bucket: vspicy
-    public-endpoint: http://127.0.0.1:9000
+    public-base-url: ${VSPICY_MINIO_PUBLIC_BASE_URL:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}/${VSPICY_MINIO_BUCKET:vspicy}}
+    hls-url-prefix: ${VSPICY_HLS_URL_PREFIX:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}/${VSPICY_MINIO_BUCKET:vspicy}/videos}
+    bucket: ${VSPICY_MINIO_BUCKET:vspicy}
+    public-endpoint: ${VSPICY_MINIO_PUBLIC_ENDPOINT:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}}
     ffmpeg-path: ffmpeg
     ffprobe-path: ffprobe
     segment-seconds: 6
@@ -120,13 +120,13 @@ vspicy:
 
   # 兼容中间版本可能读取 vspicy.minio.*
   minio:
-    endpoint: http://127.0.0.1:9000
-    access-key: ${VSPICY_MINIO_ACCESS_KEY:change_me}
-    secret-key: ${VSPICY_MINIO_SECRET_KEY:change_me}
-    bucket: vspicy
-    bucket-name: vspicy
-    public-endpoint: http://127.0.0.1:9000
-    public-base-url: http://127.0.0.1:9000/vspicy
+    endpoint: ${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}
+    access-key: ${VSPICY_MINIO_ACCESS_KEY:vspicy}
+    secret-key: ${VSPICY_MINIO_SECRET_KEY:vspicy123456}
+    bucket: ${VSPICY_MINIO_BUCKET:vspicy}
+    bucket-name: ${VSPICY_MINIO_BUCKET:vspicy}
+    public-endpoint: ${VSPICY_MINIO_PUBLIC_ENDPOINT:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}}
+    public-base-url: ${VSPICY_MINIO_PUBLIC_BASE_URL:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}/${VSPICY_MINIO_BUCKET:vspicy}}
     region: us-east-1
     secure: false
 
@@ -142,10 +142,10 @@ vspicy:
       merge-root: D:/workspace/vspicy/media/merged
       origin-root: D:/workspace/vspicy/media/origin
       hls-root: D:/workspace/vspicy/media/hls
-      public-base-url: http://127.0.0.1:9000/vspicy
-      hls-url-prefix: http://127.0.0.1:9000/vspicy/videos
-      bucket: vspicy
-      public-endpoint: http://127.0.0.1:9000
+      public-base-url: ${VSPICY_MINIO_PUBLIC_BASE_URL:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}/${VSPICY_MINIO_BUCKET:vspicy}}
+      hls-url-prefix: ${VSPICY_HLS_URL_PREFIX:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}/${VSPICY_MINIO_BUCKET:vspicy}/videos}
+      bucket: ${VSPICY_MINIO_BUCKET:vspicy}
+      public-endpoint: ${VSPICY_MINIO_PUBLIC_ENDPOINT:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}}
       ffmpeg-path: ffmpeg
       ffprobe-path: ffprobe
       segment-seconds: 6
@@ -204,12 +204,12 @@ vspicy:
         lock-lease-seconds: 120
         cron: "0 */1 * * * ?"
     minio:
-      endpoint: http://127.0.0.1:9000
-      access-key: ${VSPICY_MINIO_ACCESS_KEY:change_me}
-      secret-key: ${VSPICY_MINIO_SECRET_KEY:change_me}
-      bucket: vspicy
-      bucket-name: vspicy
-      public-endpoint: http://127.0.0.1:9000
-      public-base-url: http://127.0.0.1:9000/vspicy
+      endpoint: ${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}
+      access-key: ${VSPICY_MINIO_ACCESS_KEY:vspicy}
+      secret-key: ${VSPICY_MINIO_SECRET_KEY:vspicy123456}
+      bucket: ${VSPICY_MINIO_BUCKET:vspicy}
+      bucket-name: ${VSPICY_MINIO_BUCKET:vspicy}
+      public-endpoint: ${VSPICY_MINIO_PUBLIC_ENDPOINT:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}}
+      public-base-url: ${VSPICY_MINIO_PUBLIC_BASE_URL:${VSPICY_MINIO_ENDPOINT:http://127.0.0.1:9000}/${VSPICY_MINIO_BUCKET:vspicy}}
       region: us-east-1
       secure: false

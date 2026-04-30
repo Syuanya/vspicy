@@ -5,8 +5,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "vspicy.video.minio")
 public class MinioProperties {
     private String endpoint = "http://127.0.0.1:9000";
-    private String accessKey = "minioadmin";
-    private String secretKey = "minioadmin";
+    private String accessKey = "change_me";
+    private String secretKey = "change_me";
     private String bucket = "vspicy";
     private String publicEndpoint = "http://127.0.0.1:9000";
     private String publicBaseUrl = "http://127.0.0.1:9000/vspicy";

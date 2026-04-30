@@ -69,7 +69,7 @@ vspicy:
   gateway:
     auth:
       enabled: true
-      dev-bypass-enabled: true
+      dev-bypass-enabled: ${VSPICY_GATEWAY_DEV_BYPASS:false}
       default-user-id: 1
       default-username: dev-admin
       default-roles:
@@ -80,6 +80,9 @@ vspicy:
         - /api/auth/**
         - /api/**/health
         - /api/videos/*/play
+        - /api/videos/*/play-info
+        - /api/videos/*/hls/**
+        - /api/videos/playback/readiness/**
         - /api/articles/**
         - /api/interactions/**
         - /api/recommend/**
@@ -95,6 +98,27 @@ vspicy:
         - path: /api/videos/**
           methods: [PUT, DELETE]
           permission: content:manage
+        - path: /api/admin/operation-logs/export
+          methods: [GET]
+          permission: operation:log:export
+        - path: /api/admin/operation-logs/cleanup
+          methods: [POST]
+          permission: operation:log:cleanup
+        - path: /api/admin/operation-logs/**
+          methods: [GET]
+          permission: operation:log:view
+        - path: /api/admin/dictionaries/**
+          methods: [GET]
+          permission: system:dict:view
+        - path: /api/admin/dictionaries/**
+          methods: [POST, PUT, DELETE]
+          permission: system:dict:manage
+        - path: /api/admin/system-configs/**
+          methods: [GET]
+          permission: system:config:view
+        - path: /api/admin/system-configs/**
+          methods: [POST, PUT, DELETE]
+          permission: system:config:manage
         - path: /api/admin/**
           methods: [GET, POST, PUT, DELETE]
           permission: permission:view
@@ -104,14 +128,56 @@ vspicy:
         - path: /api/members/**
           methods: [GET, POST, PUT, DELETE]
           permission: member:view
+        - path: /api/notifications/admin/inbox
+          methods: [GET]
+          permission: notification:inbox:admin:view
+        - path: /api/notifications/admin/inbox/**
+          methods: [GET]
+          permission: notification:inbox:admin:view
+        - path: /api/notifications/admin/users/*/inbox-summary
+          methods: [GET]
+          permission: notification:inbox:admin:view
+        - path: /api/notifications/admin/overview
+          methods: [GET]
+          permission: notification:overview:view
+        - path: /api/notifications/templates/publish-logs/*/retry
+          methods: [POST]
+          permission: notification:template:publish
+        - path: /api/notifications/templates/publish-logs/**
+          methods: [GET]
+          permission: notification:template:log:view
+        - path: /api/notifications/templates/*/publish
+          methods: [POST]
+          permission: notification:template:publish
+        - path: /api/notifications/templates/*/publish-check
+          methods: [POST]
+          permission: notification:template:publish
+        - path: /api/notifications/templates/*/preview
+          methods: [POST]
+          permission: notification:template:view
+        - path: /api/notifications/templates/*/validate
+          methods: [POST]
+          permission: notification:template:view
+        - path: /api/notifications/templates/*/copy
+          methods: [POST]
+          permission: notification:template:manage
+        - path: /api/notifications/templates/**
+          methods: [GET]
+          permission: notification:template:view
+        - path: /api/notifications/templates/**
+          methods: [POST, PUT, DELETE]
+          permission: notification:template:manage
         - path: /api/notifications/system
           methods: [POST]
           permission: notification:publish
         - path: /api/notifications/events/**
           methods: [POST]
           permission: notification:publish
+        - path: /api/notifications/event-logs/*/retry
+          methods: [POST]
+          permission: notification:event:retry
         - path: /api/notifications/event-logs/**
-          methods: [GET, POST]
+          methods: [GET]
           permission: notification:event:view
         - path: /api/notifications/**
           methods: [GET, POST, PUT, DELETE]
