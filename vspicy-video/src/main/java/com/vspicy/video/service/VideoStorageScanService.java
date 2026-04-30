@@ -9,13 +9,18 @@ import com.vspicy.video.dto.VideoStorageScanResult;
 import io.minio.ListObjectsArgs;
 import io.minio.MinioClient;
 import io.minio.RemoveObjectArgs;
-import io.minio.StatObjectArgs;
 import io.minio.Result;
+import io.minio.StatObjectArgs;
 import io.minio.messages.Item;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class VideoStorageScanService {
@@ -39,45 +44,26 @@ public class VideoStorageScanService {
         int safeLimit = normalizeLimit(limit);
 
         List<DbObjectRef> dbObjects = loadDbObjects(safePrefix, safeLimit);
-        Map<String, MinioObjectRef> minioObjects = loadMinioObjects(bucket, safePrefix, safeLimit);
+        MinioLoadResult minioLoad = loadMinioObjects(bucket, safePrefix, safeLimit);
+        Map<String, MinioObjectRef> minioObjects = minioLoad.objects();
+        boolean minioAvailable = minioLoad.errorMessage() == null;
 
         List<VideoStorageScanItem> items = new ArrayList<>();
-
-        for (DbObjectRef dbObject : dbObjects) {
-            if (!objectExists(bucket, dbObject.objectKey())) {
-                items.add(new VideoStorageScanItem(
-                        "DB_MISSING_OBJECT",
-                        bucket,
-                        dbObject.objectKey(),
-                        null,
-                        dbObject.recordId(),
-                        dbObject.traceTableId(),
-                        dbObject.videoId(),
-                        dbObject.source(),
-                        "数据库存在 objectKey，但 MinIO 对象不存在"
-                ));
-            }
-        }
-
-        Set<String> dbKeys = new HashSet<>();
-        for (DbObjectRef dbObject : dbObjects) {
-            dbKeys.add(dbObject.objectKey());
-        }
-
-        for (MinioObjectRef minioObject : minioObjects.values()) {
-            if (!dbKeys.contains(minioObject.objectKey())) {
-                items.add(new VideoStorageScanItem(
-                        "OBJECT_MISSING_DB",
-                        bucket,
-                        minioObject.objectKey(),
-                        minioObject.size(),
-                        null,
-                        null,
-                        null,
-                        "MINIO",
-                        "MinIO 对象存在，但数据库没有追踪记录"
-                ));
-            }
+        if (!minioAvailable) {
+            items.add(new VideoStorageScanItem(
+                    "MINIO_SCAN_FAILED",
+                    bucket,
+                    safePrefix,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "MINIO",
+                    "扫描 MinIO 对象失败：" + minioLoad.errorMessage()
+            ));
+        } else {
+            addDbMissingObjectItems(bucket, dbObjects, items);
+            addObjectMissingDbItems(bucket, minioObjects, dbObjects, items);
         }
 
         long dbMissingObjectCount = items.stream()
@@ -106,6 +92,20 @@ public class VideoStorageScanService {
         boolean dryRun = command == null || command.dryRun() == null || Boolean.TRUE.equals(command.dryRun());
 
         VideoStorageScanResult scan = scan(prefix, limit);
+        boolean minioScanFailed = scan.items().stream()
+                .anyMatch(item -> "MINIO_SCAN_FAILED".equals(item.issueType()));
+        if (minioScanFailed) {
+            return new VideoStorageCleanupResult(
+                    scan.bucket(),
+                    scan.prefix(),
+                    true,
+                    0L,
+                    0L,
+                    List.of(),
+                    "MinIO 扫描失败，已跳过对象清理。请检查 endpoint、access-key、secret-key 和 bucket 配置。"
+            );
+        }
+
         List<VideoStorageScanItem> candidates = scan.items().stream()
                 .filter(item -> "OBJECT_MISSING_DB".equals(item.issueType()))
                 .toList();
@@ -127,6 +127,52 @@ public class VideoStorageScanService {
                 candidates,
                 dryRun ? "dryRun=true，仅预览未删除" : "孤儿对象清理完成"
         );
+    }
+
+    private void addDbMissingObjectItems(String bucket, List<DbObjectRef> dbObjects, List<VideoStorageScanItem> items) {
+        for (DbObjectRef dbObject : dbObjects) {
+            if (!objectExists(bucket, dbObject.objectKey())) {
+                items.add(new VideoStorageScanItem(
+                        "DB_MISSING_OBJECT",
+                        bucket,
+                        dbObject.objectKey(),
+                        null,
+                        dbObject.recordId(),
+                        dbObject.traceTableId(),
+                        dbObject.videoId(),
+                        dbObject.source(),
+                        "数据库存在 objectKey，但 MinIO 对象不存在"
+                ));
+            }
+        }
+    }
+
+    private void addObjectMissingDbItems(
+            String bucket,
+            Map<String, MinioObjectRef> minioObjects,
+            List<DbObjectRef> dbObjects,
+            List<VideoStorageScanItem> items
+    ) {
+        Set<String> dbKeys = new HashSet<>();
+        for (DbObjectRef dbObject : dbObjects) {
+            dbKeys.add(dbObject.objectKey());
+        }
+
+        for (MinioObjectRef minioObject : minioObjects.values()) {
+            if (!dbKeys.contains(minioObject.objectKey())) {
+                items.add(new VideoStorageScanItem(
+                        "OBJECT_MISSING_DB",
+                        bucket,
+                        minioObject.objectKey(),
+                        minioObject.size(),
+                        null,
+                        null,
+                        null,
+                        "MINIO",
+                        "MinIO 对象存在，但数据库没有追踪记录"
+                ));
+            }
+        }
     }
 
     private List<DbObjectRef> loadDbObjects(String prefix, int limit) {
@@ -172,7 +218,7 @@ public class VideoStorageScanService {
         return new ArrayList<>(dedup.values());
     }
 
-    private Map<String, MinioObjectRef> loadMinioObjects(String bucket, String prefix, int limit) {
+    private MinioLoadResult loadMinioObjects(String bucket, String prefix, int limit) {
         Map<String, MinioObjectRef> result = new LinkedHashMap<>();
 
         try {
@@ -199,9 +245,9 @@ public class VideoStorageScanService {
                 count++;
             }
 
-            return result;
+            return new MinioLoadResult(result, null);
         } catch (Exception ex) {
-            throw new BizException("扫描 MinIO 对象失败：" + ex.getMessage());
+            return new MinioLoadResult(result, ex.getMessage());
         }
     }
 
@@ -275,6 +321,12 @@ public class VideoStorageScanService {
     private record MinioObjectRef(
             String objectKey,
             Long size
+    ) {
+    }
+
+    private record MinioLoadResult(
+            Map<String, MinioObjectRef> objects,
+            String errorMessage
     ) {
     }
 }
