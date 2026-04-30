@@ -11,7 +11,11 @@ import io.minio.messages.Item;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class VideoFileConsistencyService {
@@ -55,7 +59,9 @@ public class VideoFileConsistencyService {
                 : List.of();
 
         List<TraceObjectRef> traceObjects = loadTraceObjects(safePrefix, safeLimit);
-        Map<String, MinioObjectRef> minioObjects = loadMinioObjects(bucket, safePrefix, safeLimit);
+        MinioLoadResult minioLoad = loadMinioObjects(bucket, safePrefix, safeLimit);
+        Map<String, MinioObjectRef> minioObjects = minioLoad.objects();
+        boolean minioAvailable = minioLoad.errorMessage() == null;
 
         Map<String, VideoFileObjectRef> videoFileByKey = new LinkedHashMap<>();
         for (VideoFileObjectRef item : videoFileObjects) {
@@ -68,9 +74,23 @@ public class VideoFileConsistencyService {
         }
 
         List<VideoFileConsistencyItem> items = new ArrayList<>();
+        if (!minioAvailable) {
+            items.add(new VideoFileConsistencyItem(
+                    "MINIO_SCAN_FAILED",
+                    bucket,
+                    safePrefix,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "MINIO",
+                    "扫描 MinIO 对象失败：" + minioLoad.errorMessage()
+            ));
+        }
 
         for (VideoFileObjectRef vf : videoFileObjects) {
-            if (!minioObjects.containsKey(vf.objectKey())) {
+            if (minioAvailable && !minioObjects.containsKey(vf.objectKey())) {
                 items.add(new VideoFileConsistencyItem(
                         "VIDEO_FILE_MISSING_OBJECT",
                         bucket,
@@ -118,20 +138,22 @@ public class VideoFileConsistencyService {
             }
         }
 
-        for (MinioObjectRef minioObject : minioObjects.values()) {
-            if (!videoFileByKey.containsKey(minioObject.objectKey())) {
-                items.add(new VideoFileConsistencyItem(
-                        "OBJECT_MISSING_VIDEO_FILE",
-                        bucket,
-                        minioObject.objectKey(),
-                        minioObject.size(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        "MINIO",
-                        "MinIO 有对象，但 video_file 没有记录"
-                ));
+        if (minioAvailable) {
+            for (MinioObjectRef minioObject : minioObjects.values()) {
+                if (!videoFileByKey.containsKey(minioObject.objectKey())) {
+                    items.add(new VideoFileConsistencyItem(
+                            "OBJECT_MISSING_VIDEO_FILE",
+                            bucket,
+                            minioObject.objectKey(),
+                            minioObject.size(),
+                            null,
+                            null,
+                            null,
+                            null,
+                            "MINIO",
+                            "MinIO 有对象，但 video_file 没有记录"
+                    ));
+                }
             }
         }
 
@@ -241,7 +263,7 @@ public class VideoFileConsistencyService {
         return new ArrayList<>(dedup.values());
     }
 
-    private Map<String, MinioObjectRef> loadMinioObjects(String bucket, String prefix, int limit) {
+    private MinioLoadResult loadMinioObjects(String bucket, String prefix, int limit) {
         Map<String, MinioObjectRef> result = new LinkedHashMap<>();
 
         try {
@@ -268,9 +290,9 @@ public class VideoFileConsistencyService {
                 count++;
             }
 
-            return result;
+            return new MinioLoadResult(result, null);
         } catch (Exception ex) {
-            throw new BizException("扫描 MinIO 对象失败：" + ex.getMessage());
+            return new MinioLoadResult(result, ex.getMessage());
         }
     }
 
@@ -381,6 +403,12 @@ public class VideoFileConsistencyService {
     private record MinioObjectRef(
             String objectKey,
             Long size
+    ) {
+    }
+
+    private record MinioLoadResult(
+            Map<String, MinioObjectRef> objects,
+            String errorMessage
     ) {
     }
 
