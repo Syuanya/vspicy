@@ -9,7 +9,6 @@ import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
-import jakarta.annotation.PostConstruct;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +22,7 @@ public class FileStorageService {
     private final MinioClient minioClient;
     private final MinioProperties properties;
     private final FileObjectMapper fileObjectMapper;
+    private volatile boolean bucketReady;
 
     public FileStorageService(MinioClient minioClient, MinioProperties properties, FileObjectMapper fileObjectMapper) {
         this.minioClient = minioClient;
@@ -30,23 +30,13 @@ public class FileStorageService {
         this.fileObjectMapper = fileObjectMapper;
     }
 
-    @PostConstruct
-    public void initBucket() throws Exception {
-        boolean exists = minioClient.bucketExists(BucketExistsArgs.builder()
-                .bucket(properties.getBucket())
-                .build());
-        if (!exists) {
-            minioClient.makeBucket(MakeBucketArgs.builder()
-                    .bucket(properties.getBucket())
-                    .build());
-        }
-    }
-
     public FileUploadResponse upload(MultipartFile file, String bizType, Long uploaderId) {
         if (file == null || file.isEmpty()) {
             throw new BizException("上传文件不能为空");
         }
         try {
+            ensureBucketReady();
+
             String originalName = file.getOriginalFilename() == null ? "unknown" : file.getOriginalFilename();
             String suffix = "";
             int dot = originalName.lastIndexOf('.');
@@ -93,6 +83,30 @@ public class FileStorageService {
             return new FileUploadResponse(record.getId(), originalName, properties.getBucket(), objectKey, url, file.getSize(), checksum);
         } catch (Exception ex) {
             throw new BizException(500, "文件上传失败: " + ex.getMessage());
+        }
+    }
+
+    private void ensureBucketReady() {
+        if (bucketReady) {
+            return;
+        }
+        synchronized (this) {
+            if (bucketReady) {
+                return;
+            }
+            try {
+                boolean exists = minioClient.bucketExists(BucketExistsArgs.builder()
+                        .bucket(properties.getBucket())
+                        .build());
+                if (!exists) {
+                    minioClient.makeBucket(MakeBucketArgs.builder()
+                            .bucket(properties.getBucket())
+                            .build());
+                }
+                bucketReady = true;
+            } catch (Exception ex) {
+                throw new BizException(500, "MinIO 存储初始化失败，请检查 endpoint、access-key、secret-key 和 bucket 配置: " + ex.getMessage());
+            }
         }
     }
 }

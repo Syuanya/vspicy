@@ -10,10 +10,7 @@ import com.vspicy.video.dto.VideoCompleteResponse;
 import com.vspicy.video.entity.*;
 import com.vspicy.video.mapper.*;
 import com.vspicy.video.mq.VideoTranscodeDispatcher;
-import io.minio.BucketExistsArgs;
-import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
-import jakarta.annotation.PostConstruct;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,18 +56,6 @@ public class VideoUploadService {
         this.minioClient = minioClient;
         this.minioProperties = minioProperties;
         this.videoTranscodeDispatcher = videoTranscodeDispatcher;
-    }
-
-    @PostConstruct
-    public void initBucket() throws Exception {
-        boolean exists = minioClient.bucketExists(BucketExistsArgs.builder()
-                .bucket(minioProperties.getBucket())
-                .build());
-        if (!exists) {
-            minioClient.makeBucket(MakeBucketArgs.builder()
-                    .bucket(minioProperties.getBucket())
-                    .build());
-        }
     }
 
     public UploadTaskResponse createTask(CreateUploadTaskCommand command) {

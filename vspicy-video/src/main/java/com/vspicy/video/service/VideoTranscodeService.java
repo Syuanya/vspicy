@@ -10,6 +10,8 @@ import com.vspicy.video.entity.VideoTranscodeTask;
 import com.vspicy.video.mapper.VideoFileMapper;
 import com.vspicy.video.mapper.VideoMapper;
 import com.vspicy.video.mapper.VideoTranscodeTaskMapper;
+import io.minio.BucketExistsArgs;
+import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -30,6 +32,7 @@ public class VideoTranscodeService {
     private final VideoStorageProperties storageProperties;
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
+    private volatile boolean bucketReady;
 
     public VideoTranscodeService(
             ThreadPoolTaskExecutor videoTranscodeExecutor,
@@ -134,6 +137,8 @@ public class VideoTranscodeService {
     }
 
     private String uploadHlsDirectory(Long videoId, Path hlsDir) throws Exception {
+        ensureBucketReady();
+
         String m3u8ObjectKey = null;
 
         try (var stream = Files.list(hlsDir)) {
@@ -175,6 +180,30 @@ public class VideoTranscodeService {
         }
 
         return m3u8ObjectKey;
+    }
+
+    private void ensureBucketReady() {
+        if (bucketReady) {
+            return;
+        }
+        synchronized (this) {
+            if (bucketReady) {
+                return;
+            }
+            try {
+                boolean exists = minioClient.bucketExists(BucketExistsArgs.builder()
+                        .bucket(minioProperties.getBucket())
+                        .build());
+                if (!exists) {
+                    minioClient.makeBucket(MakeBucketArgs.builder()
+                            .bucket(minioProperties.getBucket())
+                            .build());
+                }
+                bucketReady = true;
+            } catch (Exception ex) {
+                throw new BizException(500, "MinIO 存储初始化失败，请检查 endpoint、access-key、secret-key 和 bucket 配置: " + ex.getMessage());
+            }
+        }
     }
 
     private void saveVideoFile(Long videoId, String fileType, String storageType, String bucket, String objectKey, String url, Long sizeBytes, String checksum) {
