@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth", "/auth"})
 public class AuthController {
     private final AuthService authService;
 

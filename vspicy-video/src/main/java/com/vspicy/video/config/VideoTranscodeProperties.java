@@ -9,17 +9,19 @@ public class VideoTranscodeProperties {
     /**
      * 历史兼容：是否启用 RocketMQ 转码派发。
      */
-    private Boolean rocketMq = true;
+    private Boolean rocketMq = false;
 
     /**
      * 历史兼容：有些配置/代码可能写成 rocketmq。
      */
-    private Boolean rocketmq = true;
+    private Boolean rocketmq = false;
 
     private String topic = "vspicy-video-transcode-topic";
     private String transcodeTopic = "vspicy-video-transcode-topic";
     private String retryTopic = "vspicy-video-transcode-retry-topic";
     private String tag = "TRANSCODE";
+
+    private Long sendTimeoutMs = 3000L;
 
     private String consumerGroup = "vspicy-video-transcode-consumer";
     private String producerGroup = "vspicy-video-producer";
@@ -114,6 +116,14 @@ public class VideoTranscodeProperties {
 
     public void setTag(String tag) {
         this.tag = tag;
+    }
+
+    public Long getSendTimeoutMs() {
+        return sendTimeoutMs;
+    }
+
+    public void setSendTimeoutMs(Long sendTimeoutMs) {
+        this.sendTimeoutMs = sendTimeoutMs;
     }
 
     public String getConsumerGroup() {

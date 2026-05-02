@@ -38,7 +38,7 @@ public class VideoUploadController {
     @PostMapping("/upload-tasks/{taskId}/chunks")
     public Result<UploadTaskResponse> uploadChunk(
             @PathVariable Long taskId,
-            @RequestParam("chunkIndex") Integer chunkIndex,
+            @RequestParam(value = "chunkIndex", required = false) Integer chunkIndex,
             @RequestParam(value = "chunkHash", required = false) String chunkHash,
             @RequestParam("file") MultipartFile file
     ) {

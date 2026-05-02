@@ -1,5 +1,6 @@
 server:
   port: 18092
+  max-http-request-header-size: ${VSPICY_MAX_HTTP_REQUEST_HEADER_SIZE:64KB}
 
 spring:
   application:

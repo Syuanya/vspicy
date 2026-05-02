@@ -3,9 +3,11 @@ package com.vspicy.video.mq;
 import com.vspicy.video.service.VideoTranscodeService;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "vspicy.video.transcode", name = "rocket-mq", havingValue = "true")
 @RocketMQMessageListener(
         topic = "vspicy-video-transcode-topic",
         consumerGroup = "vspicy-video-transcode-consumer"

@@ -19,6 +19,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,6 +40,11 @@ public class DangerousOperationReasonValidationFilter extends OncePerRequestFilt
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String method = request.getMethod();
         if ("GET".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method)) {
+            return true;
+        }
+
+        String contentType = request.getContentType();
+        if (contentType != null && contentType.toLowerCase(Locale.ROOT).startsWith("multipart/")) {
             return true;
         }
 

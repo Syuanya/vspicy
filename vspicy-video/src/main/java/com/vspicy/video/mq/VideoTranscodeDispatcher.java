@@ -4,11 +4,15 @@ import com.vspicy.video.config.VideoTranscodeProperties;
 import com.vspicy.video.dto.VideoTranscodeDispatchView;
 import com.vspicy.video.service.VideoTranscodeService;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 @Component
 public class VideoTranscodeDispatcher {
+    private static final Logger log = LoggerFactory.getLogger(VideoTranscodeDispatcher.class);
+
     private final VideoTranscodeProperties properties;
     private final ObjectProvider<RocketMQTemplate> rocketMQTemplateProvider;
     private final VideoTranscodeService videoTranscodeService;
@@ -32,24 +36,26 @@ public class VideoTranscodeDispatcher {
             return view(null, "INVALID", false, false, "transcodeTaskId 不能为空", null);
         }
 
-        boolean rocketMqEnabled = properties == null || properties.isRocketMq();
-        RocketMQTemplate template = rocketMQTemplateProvider.getIfAvailable();
-
-        if (rocketMqEnabled && template != null) {
-            try {
-                VideoTranscodeMessage message = new VideoTranscodeMessage(transcodeTaskId, videoId);
-                template.syncSend(topic(), message);
-                return view(transcodeTaskId, "ROCKETMQ", false, true, "已分发到 RocketMQ", null);
-            } catch (Exception ex) {
-                return fallbackLocal(transcodeTaskId, "LOCAL_FALLBACK", ex.getMessage());
-            }
+        boolean rocketMqEnabled = rocketMqEnabled();
+        if (!rocketMqEnabled) {
+            log.info("RocketMQ 转码分发已关闭，使用本地转码 fallback. taskId={}, videoId={}", transcodeTaskId, videoId);
+            return fallbackLocal(transcodeTaskId, "LOCAL_FALLBACK", "RocketMQ dispatch disabled");
         }
 
-        return fallbackLocal(
-                transcodeTaskId,
-                "LOCAL_FALLBACK",
-                rocketMqEnabled ? "RocketMQTemplate 不存在" : "RocketMQ dispatch disabled"
-        );
+        RocketMQTemplate template = rocketMQTemplateProvider.getIfAvailable();
+        if (template == null) {
+            return fallbackLocal(transcodeTaskId, "LOCAL_FALLBACK", "RocketMQTemplate 不存在");
+        }
+
+        try {
+            VideoTranscodeMessage message = new VideoTranscodeMessage(transcodeTaskId, videoId);
+            template.syncSend(destination(), message, sendTimeoutMs());
+            return view(transcodeTaskId, "ROCKETMQ", false, true, "已分发到 RocketMQ", null);
+        } catch (Exception ex) {
+            log.warn("RocketMQ 转码任务分发失败，切换本地转码 fallback. taskId={}, videoId={}, destination={}, error={}",
+                    transcodeTaskId, videoId, destination(), ex.getMessage());
+            return fallbackLocal(transcodeTaskId, "LOCAL_FALLBACK", ex.getMessage());
+        }
     }
 
     public VideoTranscodeDispatchView dispatchLocal(Long transcodeTaskId) {
@@ -62,7 +68,7 @@ public class VideoTranscodeDispatcher {
 
     public VideoTranscodeDispatchView health() {
         RocketMQTemplate template = rocketMQTemplateProvider.getIfAvailable();
-        boolean rocketEnabled = properties == null || properties.isRocketMq();
+        boolean rocketEnabled = rocketMqEnabled();
         return new VideoTranscodeDispatchView(
                 null,
                 "HEALTH",
@@ -74,7 +80,7 @@ public class VideoTranscodeDispatcher {
                 true,
                 false,
                 true,
-                template == null ? "RocketMQTemplate 不存在，将使用本地 fallback" : "RocketMQTemplate 可用",
+                !rocketEnabled ? "RocketMQ 转码分发已关闭，将使用本地转码" : (template == null ? "RocketMQTemplate 不存在，将使用本地 fallback" : "RocketMQTemplate 可用"),
                 null
         );
     }
@@ -99,13 +105,17 @@ public class VideoTranscodeDispatcher {
                 tag(),
                 destination(),
                 rocketMQTemplateProvider.getIfAvailable() != null,
-                properties == null || properties.isRocketMq(),
+                rocketMqEnabled(),
                 true,
                 fallbackUsed,
                 success,
                 message,
                 error
         );
+    }
+
+    private boolean rocketMqEnabled() {
+        return properties != null && (properties.isRocketMq() || properties.isRocketmq());
     }
 
     private String topic() {
@@ -118,5 +128,10 @@ public class VideoTranscodeDispatcher {
 
     private String destination() {
         return topic() + ":" + tag();
+    }
+
+    private long sendTimeoutMs() {
+        Long value = properties == null ? null : properties.getSendTimeoutMs();
+        return value == null || value <= 0 ? 3000L : value;
     }
 }

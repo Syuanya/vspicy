@@ -1,4 +1,6 @@
 package com.vspicy.user.dto;
 
-public record UserTypeCommand(Integer userType) {
+public record UserTypeCommand(
+        Integer userType
+) {
 }

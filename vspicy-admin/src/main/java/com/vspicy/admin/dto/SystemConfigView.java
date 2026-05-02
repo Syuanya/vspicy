@@ -1,19 +1,23 @@
 package com.vspicy.admin.dto;
 
-import java.time.LocalDateTime;
-
 public record SystemConfigView(
         Long id,
         String configKey,
         String configName,
         String configValue,
-        String configType,
-        String groupCode,
-        String description,
+        String rawConfigValue,
+        String defaultValue,
+        String category,
+        String valueType,
         Boolean editable,
-        Boolean encrypted,
-        Integer status,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        Boolean sensitive,
+        Boolean required,
+        String validationRule,
+        String description,
+        String status,
+        Integer version,
+        Long updatedBy,
+        String createdAt,
+        String updatedAt
 ) {
 }

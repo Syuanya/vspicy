@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
+import java.time.LocalDateTime;
+
 @TableName("sys_user")
 public class SysUser {
     @TableId(type = IdType.AUTO)
@@ -16,6 +18,9 @@ public class SysUser {
     private String phone;
     private Integer status;
     private Integer userType;
+    private LocalDateTime lastLoginAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private Integer deleted;
 
     public Long getId() { return id; }
@@ -27,6 +32,9 @@ public class SysUser {
     public String getPhone() { return phone; }
     public Integer getStatus() { return status; }
     public Integer getUserType() { return userType; }
+    public LocalDateTime getLastLoginAt() { return lastLoginAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
     public Integer getDeleted() { return deleted; }
 
     public void setId(Long id) { this.id = id; }
@@ -38,5 +46,8 @@ public class SysUser {
     public void setPhone(String phone) { this.phone = phone; }
     public void setStatus(Integer status) { this.status = status; }
     public void setUserType(Integer userType) { this.userType = userType; }
+    public void setLastLoginAt(LocalDateTime lastLoginAt) { this.lastLoginAt = lastLoginAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public void setDeleted(Integer deleted) { this.deleted = deleted; }
 }

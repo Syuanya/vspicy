@@ -11,6 +11,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.IOException;
+import java.util.Locale;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
@@ -21,6 +22,11 @@ public class AuditRequestCachingFilter extends OncePerRequestFilter {
         String method = request.getMethod();
 
         if ("GET".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method)) {
+            return true;
+        }
+
+        String contentType = request.getContentType();
+        if (contentType != null && contentType.toLowerCase(Locale.ROOT).startsWith("multipart/")) {
             return true;
         }
 

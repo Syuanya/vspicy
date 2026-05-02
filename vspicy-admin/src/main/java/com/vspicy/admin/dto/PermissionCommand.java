@@ -8,6 +8,7 @@ public record PermissionCommand(
         String path,
         String component,
         String icon,
-        Integer sortNo
+        Integer sortNo,
+        Integer status
 ) {
 }

@@ -19,9 +19,22 @@ public class AdminPermissionController {
         this.service = service;
     }
 
+    @GetMapping("/permissions/overview")
+    public Result<PermissionOverviewView> overview() {
+        return Result.ok(service.overview());
+    }
+
     @GetMapping("/roles")
-    public Result<List<SysRole>> listRoles() {
-        return Result.ok(service.listRoles());
+    public Result<List<SysRole>> listRoles(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "status", required = false) Integer status
+    ) {
+        return Result.ok(service.listRoles(keyword, status));
+    }
+
+    @GetMapping("/roles/{roleId}")
+    public Result<SysRole> getRole(@PathVariable("roleId") Long roleId) {
+        return Result.ok(service.getRole(roleId));
     }
 
     @AuditLog(type = "CREATE", title = "创建角色")
@@ -30,15 +43,63 @@ public class AdminPermissionController {
         return Result.ok(service.createRole(command));
     }
 
+    @AuditLog(type = "UPDATE", title = "更新角色")
+    @PutMapping("/roles/{roleId}")
+    public Result<SysRole> updateRole(@PathVariable("roleId") Long roleId, @RequestBody RoleCommand command) {
+        return Result.ok(service.updateRole(roleId, command));
+    }
+
+    @AuditLog(type = "STATUS", title = "启用角色")
+    @PostMapping("/roles/{roleId}/enable")
+    public Result<SysRole> enableRole(@PathVariable("roleId") Long roleId) {
+        return Result.ok(service.changeRoleStatus(roleId, 1));
+    }
+
+    @AuditLog(type = "STATUS", title = "停用角色")
+    @PostMapping("/roles/{roleId}/disable")
+    public Result<SysRole> disableRole(@PathVariable("roleId") Long roleId) {
+        return Result.ok(service.changeRoleStatus(roleId, 0));
+    }
+
     @GetMapping("/permissions")
-    public Result<List<SysPermission>> listPermissions(@RequestParam(value = "type", required = false) String type) {
-        return Result.ok(service.listPermissions(type));
+    public Result<List<SysPermission>> listPermissions(
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "status", required = false) Integer status
+    ) {
+        return Result.ok(service.listPermissions(type, keyword, status));
+    }
+
+    @GetMapping("/permissions/{permissionId}")
+    public Result<SysPermission> getPermission(@PathVariable("permissionId") Long permissionId) {
+        return Result.ok(service.getPermission(permissionId));
     }
 
     @AuditLog(type = "CREATE", title = "创建权限")
     @PostMapping("/permissions")
     public Result<SysPermission> createPermission(@RequestBody PermissionCommand command) {
         return Result.ok(service.createPermission(command));
+    }
+
+    @AuditLog(type = "UPDATE", title = "更新权限")
+    @PutMapping("/permissions/{permissionId}")
+    public Result<SysPermission> updatePermission(
+            @PathVariable("permissionId") Long permissionId,
+            @RequestBody PermissionCommand command
+    ) {
+        return Result.ok(service.updatePermission(permissionId, command));
+    }
+
+    @AuditLog(type = "STATUS", title = "启用权限")
+    @PostMapping("/permissions/{permissionId}/enable")
+    public Result<SysPermission> enablePermission(@PathVariable("permissionId") Long permissionId) {
+        return Result.ok(service.changePermissionStatus(permissionId, 1));
+    }
+
+    @AuditLog(type = "STATUS", title = "停用权限")
+    @PostMapping("/permissions/{permissionId}/disable")
+    public Result<SysPermission> disablePermission(@PathVariable("permissionId") Long permissionId) {
+        return Result.ok(service.changePermissionStatus(permissionId, 0));
     }
 
     @GetMapping("/users/{userId}/roles")
@@ -58,6 +119,11 @@ public class AdminPermissionController {
     @GetMapping("/roles/{roleId}/permissions")
     public Result<List<SysPermission>> rolePermissions(@PathVariable("roleId") Long roleId) {
         return Result.ok(service.rolePermissions(roleId));
+    }
+
+    @GetMapping("/roles/{roleId}/permission-summary")
+    public Result<RolePermissionSummaryView> rolePermissionSummary(@PathVariable("roleId") Long roleId) {
+        return Result.ok(service.rolePermissionSummary(roleId));
     }
 
     @AuditLog(type = "ASSIGN", title = "分配角色权限")

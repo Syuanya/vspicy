@@ -1,9 +1,16 @@
 server:
   port: 18084
+  max-http-request-header-size: ${VSPICY_MAX_HTTP_REQUEST_HEADER_SIZE:64KB}
 
 spring:
   application:
     name: vspicy-video
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: ${VSPICY_VIDEO_MULTIPART_MAX_FILE_SIZE:50MB}
+      max-request-size: ${VSPICY_VIDEO_MULTIPART_MAX_REQUEST_SIZE:60MB}
+      file-size-threshold: ${VSPICY_VIDEO_MULTIPART_FILE_SIZE_THRESHOLD:2MB}
   datasource:
     url: ${VSPICY_DB_URL:jdbc:mysql://${VSPICY_DB_HOST:127.0.0.1}:${VSPICY_DB_PORT:3306}/${VSPICY_DB_NAME:vspicy}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=5000&socketTimeout=30000}
     username: ${VSPICY_DB_USERNAME:root}
@@ -63,8 +70,9 @@ video:
     hls-playlist-name: index.m3u8
   transcode:
     enabled: true
-    rocket-mq: true
-    rocketmq: true
+    rocket-mq: ${VSPICY_VIDEO_TRANSCODE_ROCKET_MQ:false}
+    rocketmq: ${VSPICY_VIDEO_TRANSCODE_ROCKETMQ:false}
+    send-timeout-ms: ${VSPICY_ROCKETMQ_SEND_TIMEOUT_MS:3000}
     topic: vspicy-video-transcode-topic
     transcode-topic: vspicy-video-transcode-topic
     retry-topic: vspicy-video-transcode-retry-topic
@@ -153,8 +161,9 @@ vspicy:
       hls-playlist-name: index.m3u8
     transcode:
       enabled: true
-      rocket-mq: true
-      rocketmq: true
+      rocket-mq: ${VSPICY_VIDEO_TRANSCODE_ROCKET_MQ:false}
+      rocketmq: ${VSPICY_VIDEO_TRANSCODE_ROCKETMQ:false}
+      send-timeout-ms: ${VSPICY_ROCKETMQ_SEND_TIMEOUT_MS:3000}
       topic: vspicy-video-transcode-topic
       transcode-topic: vspicy-video-transcode-topic
       retry-topic: vspicy-video-transcode-retry-topic

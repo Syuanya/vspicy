@@ -24,6 +24,8 @@ import java.util.*;
 
 @Component
 public class GatewayAuthFilter implements GlobalFilter, Ordered {
+    private static final String AUTHENTICATED_ONLY = "AUTHENTICATED";
+
     private final GatewayAuthProperties authProperties;
     private final JwtProperties jwtProperties;
     private final AntPathMatcher matcher = new AntPathMatcher();
@@ -75,7 +77,9 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
             List<String> permissions = claimAsList(claims.get("permissions"));
 
             String requiredPermission = requiredPermission(path, request.getMethod().name());
-            if (requiredPermission != null && !hasPermission(roles, permissions, requiredPermission)) {
+            if (requiredPermission != null
+                    && !AUTHENTICATED_ONLY.equalsIgnoreCase(requiredPermission)
+                    && !hasPermission(roles, permissions, requiredPermission)) {
                 return writeJson(exchange, HttpStatus.FORBIDDEN, "无权限：" + requiredPermission);
             }
 

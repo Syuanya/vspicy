@@ -11,6 +11,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -25,13 +26,14 @@ public class AuthJwtTokenService {
         Instant now = Instant.now();
         Instant expireAt = now.plusSeconds(properties.getAccessTokenMinutes() * 60);
 
+        // accessToken 只保留身份和角色，不再写入 permissions。
+        // roles 体积很小，网关可继续识别 SUPER_ADMIN；permissions 过多会导致 Authorization 请求头过大。
         return Jwts.builder()
                 .subject(String.valueOf(user.userId()))
                 .claims(Map.of(
                         "userId", user.userId(),
                         "username", user.username(),
-                        "roles", user.roles(),
-                        "permissions", user.permissions(),
+                        "roles", safeList(user.roles()),
                         "tokenType", "access"
                 ))
                 .issuedAt(Date.from(now))
@@ -72,6 +74,10 @@ public class AuthJwtTokenService {
             return Long.valueOf(String.valueOf(userId));
         }
         return Long.valueOf(claims.getSubject());
+    }
+
+    private List<String> safeList(List<String> value) {
+        return value == null ? List.of() : value;
     }
 
     private SecretKey secretKey() {

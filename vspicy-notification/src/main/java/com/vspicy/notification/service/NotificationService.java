@@ -435,11 +435,24 @@ public class NotificationService {
                   m.priority,
                   0 AS read_status,
                   NULL AS read_at,
-                  m.created_at
+                  m.created_at,
+                  COALESCE(a.pinned, 0) AS announcement_pinned,
+                  COALESCE(a.published_at, m.created_at) AS announcement_sort_time
                 FROM notification_message m
+                LEFT JOIN notification_announcement a
+                  ON m.biz_type = 'ANNOUNCEMENT'
+                 AND a.id = m.biz_id
                 WHERE m.publish_scope = 'ALL'
                   AND m.status = 'PUBLISHED'
-                ORDER BY m.id DESC
+                  AND (
+                    m.biz_type IS NULL OR m.biz_type <> 'ANNOUNCEMENT'
+                    OR (
+                      a.status = 'PUBLISHED'
+                      AND (a.publish_start_at IS NULL OR a.publish_start_at <= NOW())
+                      AND (a.publish_end_at IS NULL OR a.publish_end_at >= NOW())
+                    )
+                  )
+                ORDER BY announcement_pinned DESC, announcement_sort_time DESC, m.id DESC
                 LIMIT ?
                 """, (rs, rowNum) -> new NotificationInboxItem(
                 rs.getLong("inbox_id"),

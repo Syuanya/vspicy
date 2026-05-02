@@ -1,5 +1,6 @@
 server:
   port: 18080
+  max-http-request-header-size: ${VSPICY_MAX_HTTP_REQUEST_HEADER_SIZE:64KB}
 
 spring:
   application:
@@ -7,13 +8,17 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: localhost:8848
+        server-addr: ${VSPICY_NACOS_SERVER_ADDR:127.0.0.1:8848}
     gateway:
       routes:
         - id: vspicy-auth
           uri: http://localhost:18081
           predicates:
             - Path=/api/auth/**
+        - id: vspicy-auth-compat
+          uri: http://localhost:18081
+          predicates:
+            - Path=/auth/**
         - id: vspicy-user
           uri: http://localhost:18082
           predicates:
@@ -79,6 +84,8 @@ vspicy:
       whitelist:
         - /api/auth/**
         - /api/**/health
+        - /api/members/plans
+        - /api/notifications/announcements
         - /api/videos/*/play
         - /api/videos/*/play-info
         - /api/videos/*/hls/**
@@ -89,15 +96,166 @@ vspicy:
         - /api/dashboard/**
         - /api/profiles/**
       permission-rules:
+        # user service
         - path: /api/users/**
-          methods: [PUT]
+          methods: [PUT, POST, DELETE]
           permission: user:manage
         - path: /api/users/**
           methods: [GET]
           permission: user:view
+
+        # video/content base rules
         - path: /api/videos/**
           methods: [PUT, DELETE]
           permission: content:manage
+        # content safety: sensitive words, keep before broader /api/audit/**
+        - path: /api/audit/sensitive-words/test
+          methods: [POST]
+          permission: content:sensitive:test
+        - path: /api/audit/sensitive-words/*/enable
+          methods: [POST]
+          permission: content:sensitive:manage
+        - path: /api/audit/sensitive-words/*/disable
+          methods: [POST]
+          permission: content:sensitive:manage
+        - path: /api/audit/sensitive-words/**
+          methods: [GET]
+          permission: content:sensitive:view
+        - path: /api/audit/sensitive-words/**
+          methods: [POST, PUT]
+          permission: content:sensitive:manage
+        - path: /api/audit/sensitive-words/**
+          methods: [DELETE]
+          permission: content:sensitive:delete
+
+        - path: /api/audit/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: content:audit:view
+
+        # admin: login security, keep before broader /api/admin/**
+        - path: /api/admin/login-security/sessions/*/kick
+          methods: [POST]
+          permission: login:security:kick
+        - path: /api/admin/login-security/sessions/cleanup-expired
+          methods: [POST]
+          permission: login:security:cleanup
+        - path: /api/admin/login-security/**
+          methods: [GET]
+          permission: login:security:view
+
+        # admin: system jobs
+        - path: /api/admin/jobs/*/run
+          methods: [POST]
+          permission: system:job:run
+        - path: /api/admin/jobs/logs
+          methods: [GET]
+          permission: system:job:log:view
+        - path: /api/admin/jobs/**
+          methods: [GET]
+          permission: system:job:view
+        - path: /api/admin/jobs/**
+          methods: [POST, PUT, DELETE]
+          permission: system:job:manage
+
+        # admin: system monitor
+        - path: /api/admin/system-monitor/**
+          methods: [GET]
+          permission: system:monitor:view
+
+        # admin: service diagnostics
+        - path: /api/admin/service-diagnostics/**
+          methods: [GET]
+          permission: system:diagnostics:view
+
+        # admin: organization
+        - path: /api/admin/org/users/*
+          methods: [POST]
+          permission: system:org:user
+        - path: /api/admin/org/**
+          methods: [GET]
+          permission: system:org:view
+        - path: /api/admin/org/**
+          methods: [POST, PUT, DELETE]
+          permission: system:org:manage
+
+        # admin: system menu
+        - path: /api/admin/menus/roles/*
+          methods: [POST]
+          permission: system:menu:role
+        - path: /api/admin/menus/**
+          methods: [GET]
+          permission: system:menu:view
+        - path: /api/admin/menus/**
+          methods: [POST, PUT, DELETE]
+          permission: system:menu:manage
+
+        # admin: RBAC permission center
+        - path: /api/admin/roles/*/enable
+          methods: [POST]
+          permission: permission:role:status
+        - path: /api/admin/roles/*/disable
+          methods: [POST]
+          permission: permission:role:status
+        - path: /api/admin/roles/*/permission-summary
+          methods: [GET]
+          permission: permission:view
+        - path: /api/admin/roles/**
+          methods: [GET]
+          permission: permission:view
+        - path: /api/admin/roles/**
+          methods: [POST, PUT, DELETE]
+          permission: permission:manage
+        - path: /api/admin/permissions/*/enable
+          methods: [POST]
+          permission: permission:permission:status
+        - path: /api/admin/permissions/*/disable
+          methods: [POST]
+          permission: permission:permission:status
+        - path: /api/admin/permissions/**
+          methods: [GET]
+          permission: permission:view
+        - path: /api/admin/permissions/**
+          methods: [POST, PUT, DELETE]
+          permission: permission:manage
+
+        # admin: system dictionaries
+        - path: /api/admin/dictionaries/**
+          methods: [GET]
+          permission: system:dict:view
+        - path: /api/admin/dictionaries/**
+          methods: [POST, PUT, DELETE]
+          permission: system:dict:manage
+
+        # admin: system configs
+        - path: /api/admin/system-configs/**
+          methods: [GET]
+          permission: system:config:view
+        - path: /api/admin/system-configs/**
+          methods: [POST, PUT, DELETE]
+          permission: system:config:manage
+
+
+        # admin: system exception logs
+        - path: /api/admin/exception-logs/cleanup
+          methods: [POST]
+          permission: system:exception:cleanup
+        - path: /api/admin/exception-logs/*/resolve
+          methods: [POST]
+          permission: system:exception:handle
+        - path: /api/admin/exception-logs/*/ignore
+          methods: [POST]
+          permission: system:exception:handle
+        - path: /api/admin/exception-logs/*/reopen
+          methods: [POST]
+          permission: system:exception:handle
+        - path: /api/admin/exception-logs/**
+          methods: [GET]
+          permission: system:exception:view
+        - path: /api/admin/exception-logs/**
+          methods: [DELETE]
+          permission: system:exception:delete
+
+        # admin: operation logs
         - path: /api/admin/operation-logs/export
           methods: [GET]
           permission: operation:log:export
@@ -107,27 +265,46 @@ vspicy:
         - path: /api/admin/operation-logs/**
           methods: [GET]
           permission: operation:log:view
-        - path: /api/admin/dictionaries/**
+
+        # member
+        - path: /api/members/me
           methods: [GET]
-          permission: system:dict:view
-        - path: /api/admin/dictionaries/**
-          methods: [POST, PUT, DELETE]
-          permission: system:dict:manage
-        - path: /api/admin/system-configs/**
+          permission: AUTHENTICATED
+        - path: /api/members/benefits
           methods: [GET]
-          permission: system:config:view
-        - path: /api/admin/system-configs/**
-          methods: [POST, PUT, DELETE]
-          permission: system:config:manage
-        - path: /api/admin/**
-          methods: [GET, POST, PUT, DELETE]
-          permission: permission:view
+          permission: AUTHENTICATED
+        - path: /api/members/check/**
+          methods: [GET]
+          permission: AUTHENTICATED
+        - path: /api/members/cancel
+          methods: [POST]
+          permission: AUTHENTICATED
+
         - path: /api/members/subscribe
           methods: [POST]
           permission: member:subscribe
         - path: /api/members/**
           methods: [GET, POST, PUT, DELETE]
           permission: member:view
+
+        # notification self-service
+        - path: /api/notifications/stream
+          methods: [GET]
+          permission: AUTHENTICATED
+        - path: /api/notifications/inbox
+          methods: [GET]
+          permission: AUTHENTICATED
+        - path: /api/notifications/inbox/**
+          methods: [GET, POST, DELETE]
+          permission: AUTHENTICATED
+        - path: /api/notifications/unread-count
+          methods: [GET]
+          permission: AUTHENTICATED
+        - path: /api/notifications/preferences/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: AUTHENTICATED
+
+        # notification admin inbox and overview
         - path: /api/notifications/admin/inbox
           methods: [GET]
           permission: notification:inbox:admin:view
@@ -140,6 +317,8 @@ vspicy:
         - path: /api/notifications/admin/overview
           methods: [GET]
           permission: notification:overview:view
+
+        # notification templates
         - path: /api/notifications/templates/publish-logs/*/retry
           methods: [POST]
           permission: notification:template:publish
@@ -167,6 +346,8 @@ vspicy:
         - path: /api/notifications/templates/**
           methods: [POST, PUT, DELETE]
           permission: notification:template:manage
+
+        # notification events and user notification center
         - path: /api/notifications/system
           methods: [POST]
           permission: notification:publish
@@ -182,9 +363,33 @@ vspicy:
         - path: /api/notifications/**
           methods: [GET, POST, PUT, DELETE]
           permission: notification:view
-        - path: /api/audit/**
-          methods: [GET, POST, PUT, DELETE]
-          permission: content:audit:view
+
+        # video ops
         - path: /api/videos/transcode/**
           methods: [GET, POST, PUT, DELETE]
           permission: video:transcode:view
+        - path: /api/videos/upload/quota/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: video:upload:quota:view
+        - path: /api/videos/storage/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: video:storage:ops:view
+        - path: /api/videos/hls/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: video:hls:repair:view
+
+        # fallback admin rule, keep last among /api/admin/** rules
+        - path: /api/admin/**
+          methods: [GET, POST, PUT, DELETE]
+          permission: permission:view
+
+        # admin: system releases
+        - path: /api/admin/releases/**
+          methods: [GET]
+          permission: system:release:view
+        - path: /api/admin/releases/**
+          methods: [POST, PUT]
+          permission: system:release:manage
+        - path: /api/admin/releases/**
+          methods: [DELETE]
+          permission: system:release:delete
